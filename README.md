@@ -7,6 +7,7 @@
 独立 Node.js 服务，原生单页面，无运行依赖、无数据库连接、无前端构建。通过 Sub2API 的管理接口读取数据，不修改 Sub2API 源码或框架。项目为第三方工具，与 [Sub2API](https://github.com/Wei-Shaw/sub2api) 独立维护。
 
 ## 功能
+<img width="2398" height="1566" alt="image" src="https://github.com/user-attachments/assets/be03d7cb-d979-4bc1-9c51-f3a392ef92a8" />
 
 - GPT、反重力、Gemini 三个 Tab，默认 GPT；只查询当前分组，其他分组首次切换时读取。
 - 展示窗口额度、已用／剩余、括号内的重置倒计时、账号状态、当前并发和最近 5 分钟使用人数。
