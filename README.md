@@ -2,7 +2,7 @@
 
 **简体中文** | [English](README.en.md)
 
-为 Sub2API 提供一个可挂载到自定义菜单的上游账号额度看板，让普通登录用户也能看到当前容量。
+为 Sub2API 提供一个可挂载到自定义菜单的上游账号额度看板，让普通登录用户也能看到当前容量，好合理安排时间使用。
 
 **A lightweight dashboard for Sub2API upstream account quotas, concurrency, and recent activity.**
 
