@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="查看上游账号额度与当前请求占用。">
+    <title>上游额度 · sub2api</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="dashboard" aria-label="上游账号额度">
+      <div class="update-strip">
+        <span id="connection-status" class="connection-status" data-state="loading"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">正在连接</span></span>
+        <span class="update-item">状态更新 <time id="snapshot-time">—</time></span>
+        <span class="update-item quota-update-item">额度更新 <time id="quota-time">—</time><button id="refresh-button" class="button button-inline" type="button" disabled title="更新当前分组额度"><svg class="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17"></path></svg><span id="refresh-label">立即更新</span></button></span>
+      </div>
+
+      <div id="request-notice" class="notice notice-error" role="status" aria-live="polite" hidden>
+        <div class="notice-copy"><strong id="request-title"></strong><p id="request-message"></p></div>
+        <a id="dashboard-link" class="notice-link" href="/dashboard" target="_top" hidden>返回控制台 <span aria-hidden="true">↗</span></a>
+      </div>
+      <div id="data-notice" class="notice notice-warning" role="status" aria-live="polite" hidden>
+        <div class="notice-copy"><strong id="data-notice-title">额度信息可能已过期</strong><p id="data-notice-message"></p></div>
+      </div>
+
+      <section class="summary" aria-label="账号概览">
+        <dl class="summary-item"><dt>账号总数</dt><dd id="summary-total">—</dd></dl>
+        <dl class="summary-item"><dt><span class="metric-dot dot-available" aria-hidden="true"></span>可用</dt><dd id="summary-available">—</dd></dl>
+        <dl class="summary-item"><dt><span class="metric-dot dot-limited" aria-hidden="true"></span>已限流</dt><dd id="summary-limited">—</dd></dl>
+        <dl class="summary-item"><dt><span class="metric-dot dot-disabled" aria-hidden="true"></span>停用</dt><dd id="summary-disabled">—</dd></dl>
+        <dl class="summary-item summary-concurrency"><dt>当前并发</dt><dd><span id="summary-current">—</span><span class="number-divider">/</span><span id="summary-max" class="number-max">—</span><span class="summary-hint">当前 / 上限</span></dd></dl>
+        <dl class="summary-item summary-active-users"><dt>最近5分钟使用人数</dt><dd><span id="summary-active-users">—</span><span id="summary-active-users-hint" class="summary-hint">当前分组 · 用户去重</span></dd></dl>
+      </section>
+
+      <section id="accounts-panel" class="accounts-panel" aria-labelledby="accounts-title" aria-busy="true">
+        <div class="panel-toolbar">
+          <div class="panel-heading"><h2 id="accounts-title">账号额度</h2><span id="account-count" class="account-count" aria-live="polite">等待数据</span></div>
+          <nav id="group-tabs" class="group-tabs" role="tablist" aria-label="账号分组">
+            <button id="tab-chatgpt" class="group-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="group-panel" tabindex="0" data-group="chatgpt">GPT <span class="group-tab-count">—</span></button>
+            <button id="tab-antigravity" class="group-tab" type="button" role="tab" aria-selected="false" aria-controls="group-panel" tabindex="-1" data-group="antigravity">反重力 <span class="group-tab-count">—</span></button>
+            <button id="tab-gemini" class="group-tab" type="button" role="tab" aria-selected="false" aria-controls="group-panel" tabindex="-1" data-group="gemini">Gemini <span class="group-tab-count">—</span></button>
+          </nav>
+        </div>
+
+        <div id="group-panel" role="tabpanel" aria-labelledby="tab-chatgpt">
+        <div id="table-state" class="table-state" role="status" aria-live="polite">
+          <span id="state-icon" class="state-icon" aria-hidden="true">· · ·</span>
+          <h3 id="state-title">正在读取上游额度</h3>
+          <p id="state-description">正在获取账号额度与当前并发，请稍候。</p>
+          <button id="retry-button" class="button button-secondary" type="button" hidden>重新加载</button>
+        </div>
+
+        <div id="table-wrap" class="table-wrap" hidden>
+          <table class="account-table" aria-label="上游账号额度与并发">
+            <colgroup><col class="column-account"><col class="column-quota"><col class="column-concurrency"><col class="column-status"></colgroup>
+            <thead><tr><th scope="col">账号 / 平台</th><th scope="col"><span class="quota-column-heading">额度窗口<span>进度为已用比例</span></span></th><th scope="col">当前并发</th><th scope="col">状态</th></tr></thead>
+            <tbody id="account-rows"></tbody>
+          </table>
+        </div>
+        </div>
+        <div class="panel-footer"><span>每60秒更新当前分组，其他分组切换时读取</span><span>时间均为北京时间</span></div>
+      </section>
+      <p class="page-note">额度以上游最近一次返回的信息为准；当前并发及最近5分钟使用人数均为最近一次采样，人数按当前分组用户去重。</p>
+      <span id="live-status" class="sr-only" role="status" aria-live="polite"></span>
+      <noscript><p class="notice notice-error">请启用 JavaScript 后查看上游额度。</p></noscript>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "sub2api-quota-board",
+  "version": "1.0.0",
+  "description": "A lightweight dashboard for Sub2API upstream account quotas, concurrency, and recent activity.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/galois21/sub2api-quota-board.git" },
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs" }
+}
