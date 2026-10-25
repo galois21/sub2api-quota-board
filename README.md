@@ -1,5 +1,7 @@
 # Sub2API Quota Board
 
+**简体中文** | [English](README.en.md)
+
 为 Sub2API 提供一个可挂载到自定义菜单的上游账号额度看板，让普通登录用户也能看到当前容量。
 
 **A lightweight dashboard for Sub2API upstream account quotas, concurrency, and recent activity.**
@@ -7,6 +9,7 @@
 独立 Node.js 服务，原生单页面，无运行依赖、无数据库连接、无前端构建。通过 Sub2API 的管理接口读取数据，不修改 Sub2API 源码或框架。项目为第三方工具，与 [Sub2API](https://github.com/Wei-Shaw/sub2api) 独立维护。
 
 ## 功能
+
 <img width="2398" height="1566" alt="image" src="https://github.com/user-attachments/assets/be03d7cb-d979-4bc1-9c51-f3a392ef92a8" />
 
 - GPT、反重力、Gemini 三个 Tab，默认 GPT；只查询当前分组，其他分组首次切换时读取。
