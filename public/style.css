@@ -273,3 +273,41 @@ h2 { font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* The pace indicator shares the page canvas and adds no enclosing panel. */
+.quota-pressure { --pressure-color: var(--subtle); --pressure-soft: var(--surface-soft); margin: 2px 0 16px; padding: 10px 0 14px; border-bottom: 1px solid var(--line); }
+.pressure-header { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.pressure-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pressure-title { color: var(--muted); font-size: 12px; }
+.pressure-score { color: var(--ink); font-family: var(--number-font); font-size: 25px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.pressure-outof, .pressure-coverage { color: var(--subtle); font-size: 11px; }
+.pressure-label { color: var(--pressure-color); background: var(--pressure-soft); border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 600; }
+.pressure-meter { position: relative; height: 10px; border-radius: 4px; background: linear-gradient(to right, #dc2626 0%, #ef4444 5%, #fb923c 15%, #facc15 25%, #d9e99b 38%, #bbf7d0 50%, #22c55e 75%, #15803d 100%); }
+.pressure-pointer { position: absolute; left: 50%; top: -4px; width: 4px; height: 18px; border: 1px solid var(--surface); border-radius: 2px; background: var(--ink); box-shadow: 0 1px 3px #0004; transform: translateX(-50%); }
+.pressure-ticks { display: flex; justify-content: space-between; margin-top: 7px; color: var(--subtle); font-size: 10px; }
+.pressure-advice { margin-top: 10px; color: var(--muted); font-size: 12px; }
+.pressure-note { margin-top: 3px; color: var(--warning); font-size: 11px; }
+.pressure-explanation { margin-top: 5px; color: var(--subtle); font-size: 11px; }
+.pressure-explanation summary { width: fit-content; cursor: pointer; }
+.pressure-explanation p { max-width: 900px; margin-top: 5px; }
+.quota-pressure[data-level="abundant"], .quota-pressure[data-level="comfortable"] { --pressure-color: #15803d; --pressure-soft: #dcfce7; }
+.quota-pressure[data-level="normal"] { --pressure-color: #3f6212; --pressure-soft: #dcfce7; }
+.quota-pressure[data-level="watch"] { --pressure-color: #6b720d; --pressure-soft: #ecfccb; }
+.quota-pressure[data-level="warning"] { --pressure-color: #a16207; --pressure-soft: #fef9c3; }
+.quota-pressure[data-level="tight"] { --pressure-color: #c2410c; --pressure-soft: #ffedd5; }
+.quota-pressure[data-level="critical"] { --pressure-color: #b91c1c; --pressure-soft: #fee2e2; }
+.quota-pressure[data-level="unknown"] .pressure-meter { background: var(--track); }
+:root[data-theme="dark"] .quota-pressure { --pressure-soft: var(--surface-soft); }
+:root[data-theme="dark"] .quota-pressure:is([data-level="abundant"], [data-level="comfortable"], [data-level="normal"]) { --pressure-color: #86efac; }
+:root[data-theme="dark"] .quota-pressure:is([data-level="watch"], [data-level="warning"]) { --pressure-color: #fde047; }
+:root[data-theme="dark"] .quota-pressure[data-level="tight"] { --pressure-color: #fdba74; }
+:root[data-theme="dark"] .quota-pressure[data-level="critical"] { --pressure-color: #fca5a5; }
+@media (max-width: 720px) { .pressure-header { align-items: flex-start; gap: 6px; } .pressure-coverage { flex-basis: 100%; } .pressure-score { font-size: 23px; } }
+.quota-pressure[data-level="unknown"] .pressure-label::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px; border: 1px solid var(--line); border-top-color: var(--subtle); border-radius: 50%; animation: rotate 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .quota-pressure[data-level="unknown"] .pressure-label::before { animation: none; } }
+
+.antigravity-pressure-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.antigravity-pressure-grid .quota-pressure { min-width: 0; }
+.antigravity-pressure-grid .pressure-header { align-items: flex-start; gap: 6px; }
+.antigravity-pressure-grid .pressure-coverage { flex-basis: 100%; }
+@media (max-width: 600px) { .antigravity-pressure-grid { grid-template-columns: minmax(0, 1fr); gap: 0; } }

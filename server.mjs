@@ -6,12 +6,17 @@ import path from 'node:path';
 import { createQuotaSource, serviceError } from './sub2api.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
-const ASSETS = new Map([['', ['index.html', 'text/html; charset=utf-8']], ['index.html', ['index.html', 'text/html; charset=utf-8']], ['app.js', ['app.js', 'text/javascript; charset=utf-8']], ['style.css', ['style.css', 'text/css; charset=utf-8']]]);
+const ASSETS = new Map([['', ['index.html', 'text/html; charset=utf-8']], ['index.html', ['index.html', 'text/html; charset=utf-8']], ['app.js', ['app.js', 'text/javascript; charset=utf-8']], ['pressure.js', ['pressure.js', 'text/javascript; charset=utf-8']], ['style.css', ['style.css', 'text/css; charset=utf-8']]]);
 const SESSION_NAME = 'sub2api_quota_sid';
 const PUBLIC_ERROR_CODES = new Set(['AUTH_UNAVAILABLE', 'LOGIN_REQUIRED', 'ORIGIN_REJECTED', 'TOO_MANY_REQUESTS', 'INVALID_GROUP', 'NOT_CONFIGURED', 'ADMIN_KEY_REJECTED', 'UPSTREAM_UNAVAILABLE']);
 
-export function createQuotaServer({ source, baseUrl, publicOrigin, basePath = '/quota', now = Date.now }) {
+export function createQuotaServer({ source, baseUrl, publicOrigin, allowedFrameOrigins = [], basePath = '/quota', now = Date.now }) {
   const origin = new URL(publicOrigin).origin;
+  const frameAncestors = [...new Set([origin, ...allowedFrameOrigins.map(value => {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('Allowed frame origins must be HTTP(S) origins without credentials');
+    return url.origin;
+  })])].join(' ');
   const upstream = String(baseUrl).replace(/\/+$/, '').replace(/\/api\/v1$/, '');
   const prefix = '/' + basePath.replace(/^\/+|\/+$/g, '') + '/';
   const sessions = new Map(), attempts = new Map();
@@ -45,7 +50,7 @@ export function createQuotaServer({ source, baseUrl, publicOrigin, basePath = '/
   const server = createServer({ maxHeaderSize: 16384, requestTimeout: 15_000, headersTimeout: 10_000 }, async (req, res) => {
     req.resume();
     res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors ${origin}`);
+    res.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors ${frameAncestors}`);
     try {
       const requestUrl = new URL(req.url, origin);
       const pathname = requestUrl.pathname;
@@ -99,7 +104,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const publicOrigin = process.env.PUBLIC_ORIGIN;
   if (!publicOrigin) throw new Error('PUBLIC_ORIGIN is required');
   const source = createQuotaSource({ baseUrl, adminKey: process.env.SUB2API_ADMIN_KEY || '' });
-  const server = createQuotaServer({ source, baseUrl, publicOrigin, basePath: process.env.BASE_PATH || '/quota' });
+  const allowedFrameOrigins = (process.env.ALLOWED_FRAME_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
+  const server = createQuotaServer({ source, baseUrl, publicOrigin, allowedFrameOrigins, basePath: process.env.BASE_PATH || '/quota' });
   const port = Number(process.env.PORT || 18081);
   server.listen(port, '127.0.0.1', () => console.log(`Quota page listening on 127.0.0.1:${port}; administrator key ${source.configured ? 'configured' : 'not configured'}`));
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 10_000).unref(); });

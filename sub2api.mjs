@@ -189,7 +189,7 @@ export function createQuotaSource({ baseUrl, adminKey, now = Date.now, listTtlMs
     } catch (error) {
       if (error.code === 'ADMIN_KEY_REJECTED') throw error;
       if (!groupState.lastGood) throw error;
-      return { ...groupState.lastGood, stale: true, warning: '暂时无法更新，当前显示上次成功数据', activity: { ...groupState.lastGood.activity, stale: true }, refreshCooldownSeconds: 0 };
+      return { ...groupState.lastGood, stale: true, quotaReadFailed: true, warning: '暂时无法更新，当前显示上次成功数据', activity: { ...groupState.lastGood.activity, stale: true }, refreshCooldownSeconds: 0 };
     }
   }
   return {

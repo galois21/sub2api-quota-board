@@ -6,7 +6,7 @@ import { createQuotaServer } from '../server.mjs';
 
 async function listen(t, server) { server.listen(0, '127.0.0.1'); await once(server, 'listening'); t.after(() => new Promise(resolve => server.close(resolve))); return `http://127.0.0.1:${server.address().port}`; }
 const snapshot = { summary: { total: 1 }, accounts: [{ id: 1, name: 'Claude #1', windows: [] }] };
-async function setup(t, { configured = true, sourceError = null } = {}) {
+async function setup(t, { configured = true, sourceError = null, allowedFrameOrigins = [] } = {}) {
   let clock = Date.now(), active = true, reads = 0;
   const requests = [];
   const upstream = await listen(t, createServer((req, res) => {
@@ -14,7 +14,7 @@ async function setup(t, { configured = true, sourceError = null } = {}) {
     res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ code: 0, data: { id: 1, status: 'active' } }));
   }));
   const source = { configured, async getSnapshot(options) { reads++; requests.push(options); if (sourceError) throw sourceError; if (!configured) throw Object.assign(new Error('额度服务尚未配置，请联系管理员'), { code: 'NOT_CONFIGURED', status: 503 }); return snapshot; } };
-  const url = await listen(t, createQuotaServer({ source, baseUrl: upstream, publicOrigin: 'https://viewer.example', now: () => clock }));
+  const url = await listen(t, createQuotaServer({ source, baseUrl: upstream, publicOrigin: 'https://viewer.example', allowedFrameOrigins, now: () => clock }));
   const request = (path, options = {}) => fetch(url + '/quota/' + path, { ...options, redirect: 'manual' });
   const login = () => request('api/session', { method: 'POST', headers: { Authorization: 'Bearer viewer-test-token', Origin: 'https://viewer.example' } });
   return { request, login, clock: () => { clock += 61_000; }, deactivate: () => { active = false; }, reads: () => reads, requests };
@@ -95,4 +95,33 @@ test('frame policy allows only the main site and health discloses no credentials
   assert.equal(shell.headers.get('referrer-policy'), 'no-referrer');
   const health = await app.request('healthz'); assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), { status: 'ok', configured: true });
+});
+
+test('additional embedding sites do not gain cross-origin API permissions', async t => {
+  const app = await setup(t, { allowedFrameOrigins: ['https://legacy.example', 'https://viewer.example'] });
+  const shell = await app.request('');
+  const policy = shell.headers.get('content-security-policy');
+  const directive = policy.split(';').map(value => value.trim()).find(value => value.startsWith('frame-ancestors '));
+  assert.deepEqual(directive.split(/\s+/).slice(1), ['https://viewer.example', 'https://legacy.example']);
+  const denied = await app.request('api/session', { method: 'POST', headers: { Origin: 'https://legacy.example', Authorization: 'Bearer viewer-test-token' } });
+  assert.equal(denied.status, 403);
+  const login = await app.login();
+  assert.equal(login.status, 200);
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  assert.equal((await app.request('api/snapshot', { headers: { Cookie: cookie } })).status, 200);
+});
+
+test('embedding allowlist rejects wildcards, non-web schemes, and credentials', () => {
+  for (const value of ['*', 'javascript:alert(1)', 'data:text/html,test', 'https://user:pass@legacy.example']) {
+    assert.throws(() => createQuotaServer({ source: { configured: true }, baseUrl: 'http://127.0.0.1:8080', publicOrigin: 'https://viewer.example', allowedFrameOrigins: [value] }));
+  }
+});
+
+test('the quota pace module is a public static asset without administrator data', async t => {
+  const app = await setup(t);
+  const response = await app.request('pressure.js');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /javascript/);
+  assert.match(await response.text(), /export function calculatePressure/);
+  assert.equal(app.reads(), 0);
 });

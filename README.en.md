@@ -16,6 +16,7 @@ A standalone Node.js service with a plain HTML/CSS/JavaScript page. No runtime d
 - Quota windows, used and remaining percentages, reset countdowns in parentheses, account status, current concurrency, and unique users in the last five minutes.
 - Summary counts for total, available, rate-limited, and disabled accounts. Two account cards per row on desktop, one on mobile, with light and dark themes.
 - Checks the current tab every 60 seconds and pauses while the page is hidden. Supports manual updates, caching, and request coalescing.
+- GPT and Antigravity include a signed “quota sufficiency” indicator from −10 to +10: red on the tight side, pale green near normal, and deeper green when capacity is abundant. It shows loading when usable data is unavailable.
 - Disabled accounts keep gray cards with quota details hidden. Viewers see account aliases instead of real email addresses, credentials, or internal notes.
 - The admin key stays on the server. Viewers use their existing Sub2API login.
 
@@ -72,6 +73,7 @@ SUB2API_ADMIN_KEY=
 PUBLIC_ORIGIN=https://sub2api.example.com
 BASE_PATH=/quota
 PORT=18081
+ALLOWED_FRAME_ORIGINS=
 ```
 
 | Setting | Description |
@@ -81,6 +83,7 @@ PORT=18081
 | `PUBLIC_ORIGIN` | Your actual Sub2API HTTPS origin, matching the domain users sign in to, without `/quota/` |
 | `BASE_PATH` | Defaults to `/quota`; update the Nginx paths and menu if you change it |
 | `PORT` | Defaults to `18081`; the service listens only on `127.0.0.1` |
+| `ALLOWED_FRAME_ORIGINS` | Optional comma-separated iframe origin allowlist for CSP `frame-ancestors`; it does not grant cross-origin API access. Usually empty for same-origin mounting |
 
 Keep the real environment file outside the project directory with permissions set to `600`. Do not copy it into `public/` or commit it to the repository.
 
@@ -150,6 +153,8 @@ Do not put the admin key in the menu URL. Sign in to Sub2API and open the menu. 
 - Antigravity displays Gemini above Claude / GPT. Duplicate model quotas are represented by the highest utilization. An otherwise active account is marked rate-limited only when both Gemini's 5-hour quota and the Claude / GPT quota are exhausted. Error and disabled states take priority.
 - Disabled accounts are not queried for upstream quotas, and their quota details are removed from the public API. Their cards display “额度不可用” (Quota unavailable).
 - Missing, failed, or expired data is labeled accordingly. It is not interpreted as 100% remaining. Percentages are not added across accounts, and no estimate guarantees how long capacity will last.
+- GPT and Antigravity calculate sufficiency independently by model family. Using the 5-hour window's planned pace of 20 percentage points per hour, the dashboard divides the sum of valid remaining percentages by `20 × the sum of hours until reset`, then maps the ratio to −10 through +10: 0 is close to the planned pace, positive values indicate relative abundance, and negative values indicate pressure. This assumes equal account capacity and is a pace reference rather than a token count or usage guarantee. GPT treats an exhausted 7-day constraint as zero usable quota; Antigravity Gemini and Claude / GPT use their own model-family windows and actual reset times rather than substituting the generic FiveHour field.
+- The indicator uses the current snapshot and local countdown only; it adds no upstream polling. Disabled, failed, missing, or expired accounts never imply extra capacity.
 - All valid signed-in users see the same set of public accounts, regardless of their plan. Confirm that this sharing scope fits your site before installation.
 - The service exposes fixed, read-only quota endpoints. The separate menu script calls the settings API. It does not test accounts, clear rate limits, refresh OAuth credentials, or change quotas.
 

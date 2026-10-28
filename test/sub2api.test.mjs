@@ -152,6 +152,7 @@ test('failed refresh retains successful snapshot without disabling manual retry'
   await source.getSnapshot(); fail = true; clock += 61_000;
   const result = await source.getSnapshot({ refresh: true });
   assert.equal(result.stale, true);
+  assert.equal(result.quotaReadFailed, true);
   assert.equal(result.accounts.length, 1);
   assert.equal(result.refreshCooldownSeconds, 0);
 });

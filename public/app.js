@@ -1,3 +1,5 @@
+import { calculatePressure, describePressure } from './pressure.js';
+
 (() => {
   'use strict';
 
@@ -28,6 +30,11 @@
     tableState: byId('table-state'), stateIcon: byId('state-icon'),
     stateTitle: byId('state-title'), stateDescription: byId('state-description'),
     retry: byId('retry-button'), live: byId('live-status'),
+    pressure: byId('quota-pressure'), pressureScore: byId('pressure-score'),
+    pressureLabel: byId('pressure-label'), pressureCoverage: byId('pressure-coverage'),
+    pressureMeter: byId('pressure-meter'), pressurePointer: byId('pressure-pointer'),
+    pressureAdvice: byId('pressure-advice'), pressureNote: byId('pressure-note'),
+    antigravityPressure: byId('antigravity-pressure'),
   };
   const statusLabels = {
     available: '可用', limited: '已限流', disabled: '已停用', error: '异常', unknown: '未知',
@@ -403,6 +410,57 @@
     setTime(ui.quotaTime, snapshot && snapshot.quotaUpdatedAt, snapshot ? '暂无记录' : '—');
   }
 
+  const gptPressureNodes = { root: ui.pressure, score: ui.pressureScore, label: ui.pressureLabel,
+    coverage: ui.pressureCoverage, pointer: ui.pressurePointer, meter: ui.pressureMeter,
+    advice: ui.pressureAdvice, note: ui.pressureNote };
+  const antigravityPressureNodes = ['ag-gemini', 'ag-claude-gpt'].map(id => {
+    const root = byId('quota-pressure-' + id);
+    return Object.fromEntries([['root', root], ...['score', 'label', 'coverage', 'pointer', 'meter', 'advice', 'note']
+      .map(key => [key, root.querySelector('[data-pressure="' + key + '"]')])]);
+  });
+
+  function renderPressureMetric(nodes, snapshot, family) {
+    const result = calculatePressure(snapshot, Date.now(), family);
+    const description = describePressure(result.score);
+    const hasScore = result.score !== null;
+    nodes.root.dataset.level = description.level;
+    nodes.root.setAttribute('aria-busy', String(!hasScore));
+    const magnitude = hasScore ? Math.abs(result.score).toFixed(1) : null;
+    const formattedScore = !hasScore ? '—' : magnitude === '0.0' ? '0.0'
+      : (result.score > 0 ? '+' : '−') + magnitude;
+    text(nodes.score, formattedScore);
+    text(nodes.label, description.label);
+    text(nodes.coverage, '参与估算 ' + result.included + ' / ' + result.eligible + ' 个账号'
+      + (result.ratio === null ? '' : ' · 相对计划 ' + result.ratio.toFixed(2) + '×'));
+    nodes.pointer.hidden = !hasScore;
+    if (hasScore) {
+      nodes.pointer.style.left = ((result.score + 10) * 5) + '%';
+      nodes.meter.setAttribute('aria-valuenow', result.score.toFixed(1));
+    } else {
+      nodes.meter.removeAttribute('aria-valuenow');
+    }
+    nodes.meter.setAttribute('aria-valuetext', hasScore
+      ? formattedScore + '，' + description.label : description.label);
+    text(nodes.advice, (result.missing && hasScore ? '仅对有效账号估算：' : '') + description.advice);
+    const notes = [];
+    if (result.missing) notes.push(result.missing + ' 个账号额度正在加载，暂未计入评分');
+    if (result.excluded) notes.push(result.excluded + ' 个停用或异常账号未参与估算');
+    if (result.weeklyBlocked) notes.push(result.weeklyBlocked + ' 个账号 7 天额度已耗尽，可用额度按 0 计算');
+    text(nodes.note, notes.join('；'));
+    nodes.note.hidden = notes.length === 0;
+  }
+
+  function renderPressure() {
+    const snapshot = currentGroup().snapshot;
+    ui.pressure.hidden = state.activeGroup !== 'chatgpt' || !snapshot;
+    ui.antigravityPressure.hidden = state.activeGroup !== 'antigravity' || !snapshot;
+    if (!ui.pressure.hidden) renderPressureMetric(gptPressureNodes, snapshot, 'gpt');
+    if (!ui.antigravityPressure.hidden) {
+      renderPressureMetric(antigravityPressureNodes[0], snapshot, 'antigravity_gemini');
+      renderPressureMetric(antigravityPressureNodes[1], snapshot, 'antigravity_claude_gpt');
+    }
+  }
+
   function renderNotices() {
     const { problem, snapshot } = currentGroup();
     ui.requestNotice.hidden = !problem;
@@ -454,6 +512,7 @@
 
   function render() {
     renderSummary();
+    renderPressure();
     renderNotices();
     renderAccounts();
     renderControls();
@@ -613,6 +672,7 @@
     const now = Date.now();
     // Only countdown text changes here, preserving the table and scroll position.
     document.querySelectorAll('[data-reset-at]').forEach((node) => text(node, resetLabel(node.dataset.resetAt, now)));
+    renderPressure();
     renderControls();
   }
 
